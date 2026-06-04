@@ -1,0 +1,18 @@
+# Java build output
+build/
+out/
+target/
+bin/
+*.class
+
+# VS Code project metadata
+.vscode/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Logs
+*.log
