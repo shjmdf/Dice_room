@@ -16,15 +16,21 @@ import repository.PlayerCardRepository;
  */
 public class PlayerCardService {
     private final PlayerCardRepository playerCardRepository;
+    private final UserService userService;
 
-    public PlayerCardService(PlayerCardRepository playerCardRepository) {
+    public PlayerCardService(PlayerCardRepository playerCardRepository, UserService userService) {
         if (playerCardRepository == null) {
             throw new IllegalArgumentException("角色卡仓库不能为空");
         }
+        if (userService == null) {
+            throw new IllegalArgumentException("用户服务不能为空");
+        }
         this.playerCardRepository = playerCardRepository;
+        this.userService = userService;
     }
 
     public int createPlayerCard(int userId, String name) {
+        userService.requireActiveUser(userId);
         PlayerCard defaultCard = new PlayerCard(userId, 0, name);
         PlayerCard playerCard = playerCardRepository.insert(userId, defaultCard.getName(), defaultCard.getEra(),
                 PlayerCardSheetTemplate.createSheet(defaultCard));
@@ -33,6 +39,7 @@ public class PlayerCardService {
     }
 
     public List<PlayerCard> getPlayerCardsByOwnerId(int userId) {
+        userService.requireActiveUser(userId);
         return playerCardRepository.findByOwnerId(userId);
     }
 
@@ -49,6 +56,7 @@ public class PlayerCardService {
     }
 
     public PlayerCard requireOwnedPlayerCard(int userId, int cardId) {
+        userService.requireActiveUser(userId);
         PlayerCard playerCard = requirePlayerCard(cardId);
         if (playerCard.getOwnerId() != userId) {
             throw new IllegalStateException("无权操作该角色卡");

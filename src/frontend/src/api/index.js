@@ -17,7 +17,11 @@ api.interceptors.response.use(
   res => res,
   err => {
     const status = err.response?.status
-    const msg = err.response?.data?.error || '请求失败'
+    const responseData = err.response?.data
+    const msg = responseData?.error
+      || responseData?.message
+      || (typeof responseData === 'string' ? responseData : '')
+      || (status ? `请求失败：HTTP ${status}` : `请求失败：${err.message}`)
     if (status === 401) {
       const userStore = useUserStore()
       userStore.logout()

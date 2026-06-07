@@ -7,6 +7,7 @@ import backend.room.Room;
 import backend.room.RoomMember;
 import backend.room.RoomRole;
 import backend.room.RoomStatus;
+import backend.user.User;
 import repository.RoomRepository;
 
 public class RoomService {
@@ -25,12 +26,12 @@ public class RoomService {
     }
 
     public Room createRoom(int ownerId, String name) {
-        userService.requireUser(ownerId);
+        userService.requireActiveUser(ownerId);
         return roomRepository.insert(generateUniqueRoomCode(), ownerId, name);
     }
 
     public Room joinRoom(int userId, String roomCode) {
-        userService.requireUser(userId);
+        userService.requireActiveUser(userId);
 
         Room room = requireRoomByCode(roomCode);
         if (!room.isOpen()) {
@@ -45,6 +46,7 @@ public class RoomService {
     }
 
     public void leaveRoom(int userId, int roomId) {
+        userService.requireActiveUser(userId);
         Room room = requireRoom(roomId);
 
         if (room.getOwnerId() == userId) {
@@ -164,6 +166,7 @@ public class RoomService {
     }
 
     public Room requireJoinedRoom(int userId, int roomId) {
+        userService.requireActiveUser(userId);
         Room room = requireRoom(roomId);
         if (!roomRepository.isActiveMember(roomId, userId)) {
             throw new IllegalStateException("用户不在房间中");
@@ -172,6 +175,7 @@ public class RoomService {
     }
 
     public List<Room> getRoomsByUserId(int userId) {
+        userService.requireActiveUser(userId);
         return roomRepository.findByUserId(userId);
     }
 
@@ -195,10 +199,13 @@ public class RoomService {
     }
 
     public boolean isRoomMember(int roomId, int userId) {
-        return findRoomById(roomId) != null && roomRepository.isActiveMember(roomId, userId);
+        User user = userService.findUserById(userId);
+        return user != null && user.isActive() && findRoomById(roomId) != null
+                && roomRepository.isActiveMember(roomId, userId);
     }
 
     private Room requireOwnedRoom(int operatorId, int roomId) {
+        userService.requireActiveUser(operatorId);
         Room room = requireRoom(roomId);
         if (room.getOwnerId() != operatorId) {
             throw new IllegalStateException("只有房主可以操作房间");

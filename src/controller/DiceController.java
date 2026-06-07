@@ -26,17 +26,26 @@ public class DiceController {
     }
 
     @PostMapping("/roll")
-    public DiceExpressionResult roll(@RequestBody RollRequest request) {
+    public DiceExpressionResult roll(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody RollRequest request) {
+        authService.requireUser(authorization);
         return diceService.roll(request.expression());
     }
 
     @PostMapping("/repeat")
-    public RepeatRollResult rollRepeated(@RequestBody RollRequest request) {
+    public RepeatRollResult rollRepeated(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody RollRequest request) {
+        authService.requireUser(authorization);
         return diceService.rollRepeated(request.expression());
     }
 
     @PostMapping("/san-check")
-    public SanCheckResult sanCheck(@RequestBody SanCheckRequest request) {
+    public SanCheckResult sanCheck(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody SanCheckRequest request) {
+        authService.requireUser(authorization);
         return diceService.sanCheck(request.args());
     }
 

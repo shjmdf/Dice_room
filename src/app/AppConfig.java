@@ -84,8 +84,8 @@ public class AppConfig {
     }
 
     @Bean
-    public PlayerCardService playerCardService(PlayerCardRepository playerCardRepository) {
-        return new PlayerCardService(playerCardRepository);
+    public PlayerCardService playerCardService(PlayerCardRepository playerCardRepository, UserService userService) {
+        return new PlayerCardService(playerCardRepository, userService);
     }
 
     @Bean

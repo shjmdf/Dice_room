@@ -70,12 +70,13 @@ public class InviteCodeController {
                 inviteCode.getCode(),
                 inviteCode.getUsageLimit(),
                 inviteCode.getUsedCount(),
-                inviteCode.getStatus().name());
+                inviteCode.getStatus().name(),
+                inviteCode.getExpirationDate().getTime());
     }
 
     public record GenerateInviteCodeRequest(int usageLimit, long expirationTimestampMillis) {
     }
 
-    public record InviteCodeResponse(String code, int usageLimit, int usedCount, String status) {
+    public record InviteCodeResponse(String code, int usageLimit, int usedCount, String status, long expirationTimestampMillis) {
     }
 }
