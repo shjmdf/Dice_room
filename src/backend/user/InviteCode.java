@@ -26,6 +26,14 @@ public class InviteCode {
         this.expirationDate = expirationDate;
     }
 
+    public InviteCode(String code, int usageLimit, int usedCount, InviteCodeStatus status, Date expirationDate) {
+        this.code = code;
+        this.usageLimit = usageLimit;
+        this.usedCount = usedCount;
+        this.status = status;
+        this.expirationDate = expirationDate;
+    }
+
     public String getCode() {
 
         return code;
