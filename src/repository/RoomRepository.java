@@ -194,6 +194,42 @@ public class RoomRepository {
         executeUpdate(sql, muted ? 1 : 0, roomId, userId);
     }
 
+    public void updateMemberCard(int roomId, int userId, Integer cardId) {
+        String sql = """
+                UPDATE room_members
+                SET card_id = ?
+                WHERE room_id = ?
+                  AND user_id = ?
+                  AND left_at IS NULL
+                """;
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            if (cardId == null) {
+                statement.setNull(1, java.sql.Types.INTEGER);
+            } else {
+                statement.setInt(1, cardId);
+            }
+            statement.setInt(2, roomId);
+            statement.setInt(3, userId);
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new IllegalArgumentException("没有找到要更新的成员");
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("绑定角色卡失败", exception);
+        }
+    }
+
+    public void updateMemberDisplayName(int roomId, int userId, String displayName) {
+        String sql = """
+                UPDATE room_members
+                SET display_name = ?
+                WHERE room_id = ?
+                  AND user_id = ?
+                  AND left_at IS NULL
+                """;
+        executeUpdate(sql, displayName, roomId, userId);
+    }
+
     public List<RoomMember> findActiveMembersByRoomId(int roomId) {
         String sql = """
                 SELECT *
@@ -268,6 +304,12 @@ public class RoomRepository {
         if (resultSet.getInt("muted") == 1) {
             member.mute();
         }
+
+        int cardId = resultSet.getInt("card_id");
+        if (!resultSet.wasNull()) {
+            member.setCardId(cardId);
+        }
+        member.changeDisplayName(resultSet.getString("display_name"));
         return member;
     }
 

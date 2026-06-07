@@ -1,0 +1,19 @@
+{
+	# Local development/prototype default. For a real domain, run:
+	# DICE_ROOM_SITE=example.com caddy run
+	admin off
+}
+
+{$DICE_ROOM_SITE:localhost} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy {$DICE_ROOM_BACKEND:127.0.0.1:8080}
+	}
+
+	handle {
+		root * {$DICE_ROOM_WEBROOT:/root/dice_room/src/frontend/dist}
+		try_files {path} /index.html
+		file_server
+	}
+}

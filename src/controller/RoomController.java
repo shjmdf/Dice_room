@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -72,6 +73,15 @@ public class RoomController {
                 .toList();
     }
 
+    @GetMapping("/admin")
+    public List<RoomResponse> getAllRooms(
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        authService.requireAdmin(authorization);
+        return roomService.getAllRooms().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @GetMapping("/{roomId}/members")
     public List<RoomMember> getRoomMembers(
             @PathVariable int roomId,
@@ -133,6 +143,22 @@ public class RoomController {
         roomService.deleteRoom(currentUser.getId(), roomId);
     }
 
+    @PostMapping("/admin/{roomId}/close")
+    public void closeRoomByAdmin(
+            @PathVariable int roomId,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        User admin = authService.requireAdmin(authorization);
+        roomService.closeRoomByAdmin(admin.getId(), roomId);
+    }
+
+    @DeleteMapping("/admin/{roomId}")
+    public void deleteRoomByAdmin(
+            @PathVariable int roomId,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        User admin = authService.requireAdmin(authorization);
+        roomService.deleteRoomByAdmin(admin.getId(), roomId);
+    }
+
     @PatchMapping("/{roomId}/members/{targetUserId}/role")
     public void changeMemberRole(
             @PathVariable int roomId,
@@ -161,6 +187,24 @@ public class RoomController {
         roomService.unmuteMember(currentUser.getId(), roomId, targetUserId);
     }
 
+    @PutMapping("/{roomId}/members/card")
+    public void bindMemberCard(
+            @PathVariable int roomId,
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody BindCardRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        roomService.bindMemberCard(currentUser.getId(), roomId, request.cardId());
+    }
+
+    @PatchMapping("/{roomId}/members/me/nickname")
+    public void changeOwnRoomNickname(
+            @PathVariable int roomId,
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody RoomNicknameRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        roomService.changeOwnRoomDisplayName(currentUser.getId(), roomId, request.nickname());
+    }
+
     public record CreateRoomRequest(String name) {
     }
 
@@ -177,6 +221,12 @@ public class RoomController {
     }
 
     public record ChangeRoleRequest(RoomRole role) {
+    }
+
+    public record BindCardRequest(Integer cardId) {
+    }
+
+    public record RoomNicknameRequest(String nickname) {
     }
 
     private RoomResponse toResponse(Room room) {

@@ -123,6 +123,50 @@ public class UserService {
         userRepository.updatePasswordHash(userId, passwordHash);
     }
 
+    public void changeOwnPassword(int userId, String oldPassword, String newPassword) {
+        checkText(oldPassword, "旧密码");
+        checkText(newPassword, "新密码");
+
+        User user = requireUser(userId);
+        if (!passwordHasher.matches(oldPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("旧密码错误");
+        }
+
+        changePassword(userId, newPassword);
+    }
+
+    public User updateProfile(int userId, String nickname, String avatarUrl, String description, String email) {
+        checkText(nickname, "昵称");
+
+        User user = requireUser(userId);
+        user.changeNickname(nickname);
+        user.setAvatarUrl(normalizeOptionalText(avatarUrl));
+        user.setDescription(normalizeOptionalText(description));
+        user.setEmail(normalizeOptionalText(email));
+
+        userRepository.updateProfile(
+                userId,
+                user.getNickname(),
+                user.getAvatarUrl(),
+                user.getDescription(),
+                user.getEmail());
+        return requireUser(userId);
+    }
+
+    public User changeLoginName(int userId, String loginName) {
+        checkText(loginName, "登录名");
+
+        User existing = findUserByLoginName(loginName);
+        if (existing != null && existing.getId() != userId) {
+            throw new IllegalArgumentException("登录名已存在");
+        }
+
+        User user = requireUser(userId);
+        user.changeLoginName(loginName);
+        userRepository.updateLoginName(userId, loginName);
+        return requireUser(userId);
+    }
+
     public void suspendUser(int userId) {
         User user = requireUser(userId);
         if (user.getStatus() == UserStatus.ACTIVE) {
@@ -186,5 +230,9 @@ public class UserService {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + "不能为空");
         }
+    }
+
+    private String normalizeOptionalText(String value) {
+        return value == null ? "" : value.trim();
     }
 }

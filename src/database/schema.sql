@@ -47,11 +47,14 @@ CREATE TABLE IF NOT EXISTS room_members (
     user_id INTEGER NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('OWNER', 'PLAYER', 'BOT')),
     muted INTEGER NOT NULL DEFAULT 0 CHECK (muted IN (0, 1)),
+    card_id INTEGER,
+    display_name TEXT NOT NULL DEFAULT '',
     joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     left_at TEXT,
 
     FOREIGN KEY (room_id) REFERENCES rooms(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (card_id) REFERENCES player_cards(id)
 );
 
 CREATE TABLE IF NOT EXISTS messages (

@@ -135,6 +135,16 @@ public class UserRepository {
         executeUpdate(sql, passwordHash, userId);
     }
 
+    public void updateLoginName(int userId, String loginName) {
+        String sql = """
+                UPDATE users
+                SET login_name = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """;
+        executeUpdate(sql, loginName, userId);
+    }
+
     public void updateProfile(int userId, String nickname, String avatarUrl, String description, String email) {
         String sql = """
                 UPDATE users

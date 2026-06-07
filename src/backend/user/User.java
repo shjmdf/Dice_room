@@ -41,7 +41,7 @@ public class User {
     }
 
     public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
+        this.avatarUrl = avatarUrl == null ? "" : avatarUrl;
     }
 
     public String getDescription() {
@@ -49,7 +49,7 @@ public class User {
     }
 
     public void setDescription(String description) {
-        this.description = description;
+        this.description = description == null ? "" : description;
     }
 
     public String getNickname() {
@@ -65,6 +65,13 @@ public class User {
 
     public String getLoginName() {
         return loginName;
+    }
+
+    public void changeLoginName(String loginName) {
+        if (loginName == null || loginName.isBlank()) {
+            throw new IllegalArgumentException("登录名不能为空");
+        }
+        this.loginName = loginName;
     }
 
     public String getPasswordHash() {
@@ -111,6 +118,6 @@ public class User {
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        this.email = email == null ? "" : email;
     }
 }

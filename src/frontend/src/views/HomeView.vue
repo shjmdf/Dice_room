@@ -2,7 +2,11 @@
   <div class="home-page">
     <el-header class="header">
       <span class="welcome">欢迎, {{ userStore.user?.nickname }}</span>
-      <el-button text @click="handleLogout">退出登录</el-button>
+      <div class="header-actions">
+        <el-button text @click="router.push('/profile')">个人资料</el-button>
+        <el-button v-if="userStore.user?.role === 'ADMIN'" text @click="router.push('/admin')">管理后台</el-button>
+        <el-button text @click="handleLogout">退出登录</el-button>
+      </div>
     </el-header>
     <el-row :gutter="20" style="padding: 20px;">
       <el-col :span="14">
@@ -142,6 +146,11 @@ function handleLogout() {
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 .welcome { font-weight: 600; }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .card-header {
   display: flex;
   justify-content: space-between;

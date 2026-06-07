@@ -10,6 +10,8 @@ public class RoomMember {
     private final int userId;
     private RoomRole role;
     private boolean muted;
+    private Integer cardId;
+    private String displayName;
     private final LocalDateTime joinedAt;
     private LocalDateTime leftAt;
 
@@ -22,6 +24,8 @@ public class RoomMember {
         this.userId = userId;
         this.role = role;
         this.muted = false;
+        this.cardId = null;
+        this.displayName = "";
         this.joinedAt = LocalDateTime.now();
         this.leftAt = null;
     }
@@ -55,6 +59,22 @@ public class RoomMember {
 
     public void unmute() {
         muted = false;
+    }
+
+    public Integer getCardId() {
+        return cardId;
+    }
+
+    public void setCardId(Integer cardId) {
+        this.cardId = cardId;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void changeDisplayName(String displayName) {
+        this.displayName = displayName == null ? "" : displayName.trim();
     }
 
     public LocalDateTime getJoinedAt() {

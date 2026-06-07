@@ -60,6 +60,35 @@ public class UserController {
         return toResponse(authService.requireUser(authorization));
     }
 
+    @PatchMapping("/me/profile")
+    public UserResponse updateCurrentUserProfile(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody UpdateProfileRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        return toResponse(userService.updateProfile(
+                currentUser.getId(),
+                request.nickname(),
+                request.avatarUrl(),
+                request.description(),
+                request.email()));
+    }
+
+    @PatchMapping("/me/login-name")
+    public UserResponse updateCurrentUserLoginName(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody ChangeLoginNameRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        return toResponse(userService.changeLoginName(currentUser.getId(), request.loginName()));
+    }
+
+    @PatchMapping("/me/password")
+    public void changeCurrentUserPassword(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody ChangeOwnPasswordRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        userService.changeOwnPassword(currentUser.getId(), request.oldPassword(), request.newPassword());
+    }
+
     @GetMapping("/{userId}")
     public UserResponse getUser(
             @PathVariable int userId,
@@ -135,6 +164,15 @@ public class UserController {
     }
 
     public record ChangePasswordRequest(String password) {
+    }
+
+    public record UpdateProfileRequest(String nickname, String avatarUrl, String description, String email) {
+    }
+
+    public record ChangeLoginNameRequest(String loginName) {
+    }
+
+    public record ChangeOwnPasswordRequest(String oldPassword, String newPassword) {
     }
 
     public record UserResponse(
