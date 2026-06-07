@@ -11,6 +11,7 @@ import java.util.List;
 import backend.message.Message;
 import backend.message.MessageType;
 import backend.message.MessageVisibility;
+import repository.Page;
 
 public class MessageRepository {
     private final Connection connection;
@@ -91,6 +92,13 @@ public class MessageRepository {
     }
 
     public List<Message> findVisibleMessages(int roomId, int userId) {
+        return findVisibleMessages(roomId, userId, 1, 200).items();
+    }
+
+    public Page<Message> findVisibleMessages(int roomId, int userId, int page, int size) {
+        int total = countVisibleMessages(roomId, userId);
+        int offset = (page - 1) * size;
+
         String sql = """
                 SELECT *
                 FROM messages
@@ -100,7 +108,8 @@ public class MessageRepository {
                     OR sender_id = ?
                     OR receiver_id = ?
                   )
-                ORDER BY id
+                ORDER BY id DESC
+                LIMIT ? OFFSET ?
                 """;
         List<Message> messages = new ArrayList<>();
 
@@ -108,14 +117,40 @@ public class MessageRepository {
             statement.setInt(1, roomId);
             statement.setInt(2, userId);
             statement.setInt(3, userId);
+            statement.setInt(4, size);
+            statement.setInt(5, offset);
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
                     messages.add(mapRowToMessage(resultSet));
                 }
             }
-            return messages;
+            return new Page<>(messages, page, size, total);
         } catch (SQLException exception) {
             throw new IllegalStateException("查询可见消息失败", exception);
+        }
+    }
+
+    private int countVisibleMessages(int roomId, int userId) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM messages
+                WHERE room_id = ?
+                  AND (
+                    visibility = 'PUBLIC'
+                    OR sender_id = ?
+                    OR receiver_id = ?
+                  )
+                """;
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, roomId);
+            statement.setInt(2, userId);
+            statement.setInt(3, userId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getInt(1);
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("统计可见消息数量失败", exception);
         }
     }
 

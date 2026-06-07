@@ -10,37 +10,48 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.playercard.PlayerCard;
 import backend.playercard.sheet.PlayerCardSheet;
+import backend.user.User;
+import service.AuthService;
 import service.PlayerCardService;
 
 @RestController
 @RequestMapping("/api/player-cards")
 public class PlayerCardController {
     private final PlayerCardService playerCardService;
+    private final AuthService authService;
 
-    public PlayerCardController(PlayerCardService playerCardService) {
+    public PlayerCardController(PlayerCardService playerCardService, AuthService authService) {
         this.playerCardService = playerCardService;
+        this.authService = authService;
     }
 
     @PostMapping
-    public PlayerCardSheetResponse createPlayerCard(@RequestBody CreatePlayerCardRequest request) {
-        int cardId = playerCardService.createPlayerCard(request.userId(), request.name());
-        return getPlayerCardSheet(cardId, request.userId());
+    public PlayerCardSheetResponse createPlayerCard(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody CreatePlayerCardRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        int cardId = playerCardService.createPlayerCard(currentUser.getId(), request.name());
+        return getPlayerCardSheet(cardId, authorization);
     }
 
     @GetMapping("/{cardId}")
-    public PlayerCard getPlayerCard(@PathVariable int cardId) {
-        return playerCardService.requirePlayerCard(cardId);
+    public PlayerCard getPlayerCard(
+            @PathVariable int cardId,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        return requireAccessiblePlayerCard(authorization, cardId);
     }
 
     @GetMapping("/{cardId}/sheet")
-    public PlayerCardSheetResponse getPlayerCardSheet(@PathVariable int cardId, @RequestParam int userId) {
-        PlayerCard playerCard = playerCardService.requireOwnedPlayerCard(userId, cardId);
-        PlayerCardSheet sheet = playerCardService.getPlayerCardSheet(userId, cardId);
+    public PlayerCardSheetResponse getPlayerCardSheet(
+            @PathVariable int cardId,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        PlayerCard playerCard = requireAccessiblePlayerCard(authorization, cardId);
+        PlayerCardSheet sheet = playerCardService.getPlayerCardSheet(playerCard.getOwnerId(), cardId);
 
         return new PlayerCardSheetResponse(
                 playerCard.getId(),
@@ -53,46 +64,74 @@ public class PlayerCardController {
     @PutMapping("/{cardId}/sheet")
     public PlayerCardSheetResponse updatePlayerCardSheet(
             @PathVariable int cardId,
+            @RequestHeader(name = "Authorization", required = false) String authorization,
             @RequestBody UpdatePlayerCardSheetRequest request) {
-        playerCardService.updatePlayerCardSheet(request.userId(), cardId, request.sheet());
-        return getPlayerCardSheet(cardId, request.userId());
+        PlayerCard playerCard = requireAccessiblePlayerCard(authorization, cardId);
+        playerCardService.updatePlayerCardSheet(playerCard.getOwnerId(), cardId, request.sheet());
+        return getPlayerCardSheet(cardId, authorization);
     }
 
     @GetMapping("/{cardId}/json")
-    public PlayerCardSheet getCardJson(@PathVariable int cardId, @RequestParam int userId) {
-        return playerCardService.getPlayerCardSheet(userId, cardId);
+    public PlayerCardSheet getCardJson(
+            @PathVariable int cardId,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        PlayerCard playerCard = requireAccessiblePlayerCard(authorization, cardId);
+        return playerCardService.getPlayerCardSheet(playerCard.getOwnerId(), cardId);
     }
 
     @PutMapping("/{cardId}/json")
-    public void replaceCardJson(@PathVariable int cardId, @RequestBody UpdateCardJsonRequest request) {
-        playerCardService.updatePlayerCardSheet(request.userId(), cardId, request.sheet());
+    public void replaceCardJson(
+            @PathVariable int cardId,
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody UpdateCardJsonRequest request) {
+        PlayerCard playerCard = requireAccessiblePlayerCard(authorization, cardId);
+        playerCardService.updatePlayerCardSheet(playerCard.getOwnerId(), cardId, request.sheet());
     }
 
     @GetMapping("/user/{userId}")
-    public List<PlayerCard> getPlayerCardsByUserId(@PathVariable int userId) {
+    public List<PlayerCard> getPlayerCardsByUserId(
+            @PathVariable int userId,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        authService.requireSelfOrAdmin(authorization, userId);
         return playerCardService.getPlayerCardsByOwnerId(userId);
     }
 
     @PatchMapping("/{cardId}/basic")
-    public void updateBasicInfo(@PathVariable int cardId, @RequestBody UpdateBasicInfoRequest request) {
-        playerCardService.updatePlayerCardBasicInfo(request.userId(), cardId, request.name(), request.era());
+    public void updateBasicInfo(
+            @PathVariable int cardId,
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody UpdateBasicInfoRequest request) {
+        PlayerCard playerCard = requireAccessiblePlayerCard(authorization, cardId);
+        playerCardService.updatePlayerCardBasicInfo(playerCard.getOwnerId(), cardId, request.name(), request.era());
     }
 
     @DeleteMapping("/{cardId}")
-    public void deletePlayerCard(@PathVariable int cardId, @RequestParam int userId) {
-        playerCardService.deletePlayerCard(userId, cardId);
+    public void deletePlayerCard(
+            @PathVariable int cardId,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        PlayerCard playerCard = requireAccessiblePlayerCard(authorization, cardId);
+        playerCardService.deletePlayerCard(playerCard.getOwnerId(), cardId);
     }
 
-    public record CreatePlayerCardRequest(int userId, String name) {
+    private PlayerCard requireAccessiblePlayerCard(String authorization, int cardId) {
+        User currentUser = authService.requireUser(authorization);
+        PlayerCard playerCard = playerCardService.requirePlayerCard(cardId);
+        if (playerCard.getOwnerId() != currentUser.getId() && !currentUser.isAdmin()) {
+            throw new IllegalStateException("无权操作该角色卡");
+        }
+        return playerCard;
     }
 
-    public record UpdateBasicInfoRequest(int userId, String name, String era) {
+    public record CreatePlayerCardRequest(String name) {
     }
 
-    public record UpdateCardJsonRequest(int userId, PlayerCardSheet sheet) {
+    public record UpdateBasicInfoRequest(String name, String era) {
     }
 
-    public record UpdatePlayerCardSheetRequest(int userId, PlayerCardSheet sheet) {
+    public record UpdateCardJsonRequest(PlayerCardSheet sheet) {
+    }
+
+    public record UpdatePlayerCardSheetRequest(PlayerCardSheet sheet) {
     }
 
     public record PlayerCardSheetResponse(int id, int ownerId, String name, String era, PlayerCardSheet sheet) {

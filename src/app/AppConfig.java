@@ -5,8 +5,8 @@ import java.sql.Connection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import backend.user.passwordHash.BCryptPasswordHasher;
 import backend.user.passwordHash.PasswordHasher;
-import backend.user.passwordHash.Sha256PasswordHasher;
 import repository.DatabaseConnection;
 import repository.DatabaseInitializer;
 import repository.InviteCodeRepository;
@@ -15,6 +15,7 @@ import repository.PlayerCardRepository;
 import repository.RoomRepository;
 import repository.UserRepository;
 import service.DiceService;
+import service.AuthService;
 import service.InviteCodeService;
 import service.MessageService;
 import service.PlayerCardService;
@@ -32,7 +33,7 @@ public class AppConfig {
 
     @Bean
     public PasswordHasher passwordHasher() {
-        return new Sha256PasswordHasher();
+        return new BCryptPasswordHasher();
     }
 
     @Bean
@@ -70,6 +71,11 @@ public class AppConfig {
             InviteCodeService inviteCodeService,
             PasswordHasher passwordHasher) {
         return new UserService(userRepository, inviteCodeService, passwordHasher);
+    }
+
+    @Bean
+    public AuthService authService(UserService userService) {
+        return new AuthService(userService);
     }
 
     @Bean
