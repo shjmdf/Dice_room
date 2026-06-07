@@ -117,7 +117,7 @@ public class UserService {
 
     public void changePassword(int userId, String rawPassword) {
         checkText(rawPassword, "密码");
-        User user = requireUser(userId);
+        User user = requireActiveUser(userId);
         String passwordHash = passwordHasher.hash(rawPassword);
         user.changePasswordHash(passwordHash);
         userRepository.updatePasswordHash(userId, passwordHash);
@@ -127,7 +127,7 @@ public class UserService {
         checkText(oldPassword, "旧密码");
         checkText(newPassword, "新密码");
 
-        User user = requireUser(userId);
+        User user = requireActiveUser(userId);
         if (!passwordHasher.matches(oldPassword, user.getPasswordHash())) {
             throw new IllegalArgumentException("旧密码错误");
         }
@@ -138,7 +138,7 @@ public class UserService {
     public User updateProfile(int userId, String nickname, String avatarUrl, String description, String email) {
         checkText(nickname, "昵称");
 
-        User user = requireUser(userId);
+        User user = requireActiveUser(userId);
         user.changeNickname(nickname);
         user.setAvatarUrl(normalizeOptionalText(avatarUrl));
         user.setDescription(normalizeOptionalText(description));
@@ -150,7 +150,7 @@ public class UserService {
                 user.getAvatarUrl(),
                 user.getDescription(),
                 user.getEmail());
-        return requireUser(userId);
+        return requireActiveUser(userId);
     }
 
     public User changeLoginName(int userId, String loginName) {
@@ -161,10 +161,10 @@ public class UserService {
             throw new IllegalArgumentException("登录名已存在");
         }
 
-        User user = requireUser(userId);
+        User user = requireActiveUser(userId);
         user.changeLoginName(loginName);
         userRepository.updateLoginName(userId, loginName);
-        return requireUser(userId);
+        return requireActiveUser(userId);
     }
 
     public void suspendUser(int userId) {
@@ -218,8 +218,16 @@ public class UserService {
         return user;
     }
 
-    public User requireAdmin(int userId) {
+    public User requireActiveUser(int userId) {
         User user = requireUser(userId);
+        if (!user.isActive()) {
+            throw new IllegalStateException("用户状态不可使用");
+        }
+        return user;
+    }
+
+    public User requireAdmin(int userId) {
+        User user = requireActiveUser(userId);
         if (!user.isAdmin()) {
             throw new IllegalStateException("需要管理员权限");
         }

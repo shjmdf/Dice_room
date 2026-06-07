@@ -96,11 +96,12 @@ public class UserRepository {
     }
 
     public List<User> findAdmins() {
-        String sql = "SELECT * FROM users WHERE role = ? ORDER BY id";
+        String sql = "SELECT * FROM users WHERE role = ? AND status = ? ORDER BY id";
         List<User> admins = new ArrayList<>();
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, UserRole.ADMIN.name());
+            statement.setString(2, UserStatus.ACTIVE.name());
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
                     admins.add(mapRowToUser(resultSet));
@@ -113,10 +114,11 @@ public class UserRepository {
     }
 
     public boolean existsAdmin() {
-        String sql = "SELECT 1 FROM users WHERE role = ? LIMIT 1";
+        String sql = "SELECT 1 FROM users WHERE role = ? AND status = ? LIMIT 1";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, UserRole.ADMIN.name());
+            statement.setString(2, UserStatus.ACTIVE.name());
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
             }

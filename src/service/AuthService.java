@@ -47,10 +47,12 @@ public class AuthService {
             throw new IllegalStateException("登录已过期，请重新登录");
         }
 
-        User user = userService.requireUser(session.userId());
-        if (!user.isActive()) {
+        User user;
+        try {
+            user = userService.requireActiveUser(session.userId());
+        } catch (IllegalStateException exception) {
             sessions.remove(token);
-            throw new IllegalStateException("用户状态不可使用");
+            throw exception;
         }
 
         sessions.put(token, new Session(user.getId(), expiresAt()));

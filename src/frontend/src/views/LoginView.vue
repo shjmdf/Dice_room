@@ -1,7 +1,7 @@
 <template>
   <div class="login-page">
     <el-card class="login-card">
-      <h2 class="title">骰子房间</h2>
+      <h2 class="title">DiceRoom</h2>
       <el-tabs v-model="activeTab">
         <el-tab-pane label="登录" name="login">
           <el-form @submit.prevent="handleLogin">
@@ -72,7 +72,10 @@ const adminForm = reactive({ loginName: '', password: '', nickname: '' })
 async function handleLogin() {
   loading.value = true
   try {
-    const { data } = await api.post('/users/login', loginForm)
+    const { data } = await api.post('/users/login', {
+      loginName: loginForm.loginName.trim(),
+      password: loginForm.password
+    })
     userStore.setLogin(data.token, data.user)
     router.push('/')
   } finally {
@@ -83,7 +86,12 @@ async function handleLogin() {
 async function handleRegister() {
   loading.value = true
   try {
-    await api.post('/users/register', registerForm)
+    await api.post('/users/register', {
+      loginName: registerForm.loginName.trim(),
+      password: registerForm.password,
+      nickname: registerForm.nickname.trim(),
+      inviteCode: registerForm.inviteCode.trim()
+    })
     ElMessage.success('注册成功，请登录')
     activeTab.value = 'login'
   } finally {
@@ -94,7 +102,11 @@ async function handleRegister() {
 async function handleInitAdmin() {
   loading.value = true
   try {
-    await api.post('/users/admin/initialize', adminForm)
+    await api.post('/users/admin/initialize', {
+      loginName: adminForm.loginName.trim(),
+      password: adminForm.password,
+      nickname: adminForm.nickname.trim()
+    })
     ElMessage.success('管理员初始化成功，请登录')
     activeTab.value = 'login'
   } finally {

@@ -80,32 +80,86 @@
           </el-table-column>
         </el-table>
       </section>
+
+      <section class="admin-section">
+        <div class="section-title with-tools">
+          <span>邀请码</span>
+          <div class="invite-form">
+            <el-input-number v-model="newInvite.usageLimit" :min="1" :max="999" size="small" controls-position="right" />
+            <el-date-picker
+              v-model="newInvite.expirationDate"
+              type="datetime"
+              size="small"
+              placeholder="过期时间"
+              class="date-picker"
+            />
+            <el-button size="small" type="primary" :loading="creatingInvite" @click="createInviteCode">创建邀请码</el-button>
+          </div>
+        </div>
+        <el-table :data="inviteCodes" stripe>
+          <el-table-column prop="code" label="邀请码" min-width="150" />
+          <el-table-column label="使用次数" width="120">
+            <template #default="{ row }">{{ row.usedCount }} / {{ row.usageLimit }}</template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="120" />
+          <el-table-column label="过期时间" min-width="180">
+            <template #default="{ row }">{{ formatDate(row.expirationTimestampMillis) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="170" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                size="small"
+                :disabled="row.status !== 'ACTIVE'"
+                @click.stop="disableInviteCode(row)"
+              >
+                停止
+              </el-button>
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                @click.stop="deleteInviteCode(row)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </section>
     </main>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 
 const router = useRouter()
 const loading = ref(false)
+const creatingInvite = ref(false)
 const users = ref([])
 const rooms = ref([])
+const inviteCodes = ref([])
+const newInvite = reactive({
+  usageLimit: 1,
+  expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+})
 
 onMounted(load)
 
 async function load() {
   loading.value = true
   try {
-    const [userRes, roomRes] = await Promise.all([
+    const [userRes, roomRes, inviteRes] = await Promise.all([
       api.get('/users'),
-      api.get('/rooms/admin')
+      api.get('/rooms/admin'),
+      api.get('/invite-codes')
     ])
     users.value = userRes.data
     rooms.value = roomRes.data
+    inviteCodes.value = inviteRes.data
   } finally {
     loading.value = false
   }
@@ -141,6 +195,45 @@ async function deleteRoom(room) {
   await api.delete(`/rooms/admin/${room.id}`)
   ElMessage.success('房间已删除')
   await load()
+}
+
+async function createInviteCode() {
+  if (!newInvite.expirationDate) {
+    ElMessage.warning('请选择过期时间')
+    return
+  }
+
+  creatingInvite.value = true
+  try {
+    const { data } = await api.post('/invite-codes', {
+      usageLimit: newInvite.usageLimit,
+      expirationTimestampMillis: newInvite.expirationDate.getTime()
+    })
+    ElMessage.success(`邀请码已创建：${data.code}`)
+    await load()
+  } finally {
+    creatingInvite.value = false
+  }
+}
+
+async function disableInviteCode(inviteCode) {
+  await api.post(`/invite-codes/${inviteCode.code}/disable`)
+  ElMessage.success('邀请码已停止')
+  await load()
+}
+
+async function deleteInviteCode(inviteCode) {
+  await ElMessageBox.confirm(`确定删除邀请码「${inviteCode.code}」吗？`, '删除邀请码', { type: 'warning' })
+  await api.delete(`/invite-codes/${inviteCode.code}`)
+  ElMessage.success('邀请码已删除')
+  await load()
+}
+
+function formatDate(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString()
 }
 </script>
 
@@ -196,6 +289,24 @@ async function deleteRoom(room) {
   font-weight: 700;
 }
 
+.with-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.invite-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.date-picker {
+  width: 210px;
+}
+
 @media (max-width: 720px) {
   .topbar {
     height: auto;
@@ -204,6 +315,16 @@ async function deleteRoom(room) {
     align-items: flex-start;
     flex-direction: column;
     padding: 14px 20px;
+  }
+
+  .with-tools {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .invite-form,
+  .date-picker {
+    width: 100%;
   }
 }
 </style>

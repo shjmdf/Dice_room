@@ -52,6 +52,10 @@ public class InviteCode {
         return status;
     }
 
+    public Date getExpirationDate() {
+        return new Date(expirationDate.getTime());
+    }
+
     public boolean canUse() {
         checkExpiration();
         return status == InviteCodeStatus.ACTIVE && usedCount < usageLimit;

@@ -40,7 +40,7 @@ public class Main {
             InviteCodeService inviteCodeService = new InviteCodeService(inviteCodeRepository);
             UserService userService = new UserService(userRepository, inviteCodeService, new Sha256PasswordHasher());
             RoomService roomService = new RoomService(userService, roomRepository);
-            PlayerCardService playerCardService = new PlayerCardService(playerCardRepository);
+            PlayerCardService playerCardService = new PlayerCardService(playerCardRepository, userService);
             DiceService diceService = new DiceService(playerCardService);
             MessageService messageService = new MessageService(roomService, messageRepository);
 
