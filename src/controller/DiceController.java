@@ -3,21 +3,26 @@ package controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.dice.DiceExpressionResult;
 import backend.dice.RepeatRollResult;
 import backend.dice.SanCheckResult;
 import backend.dice.SkillCheckResult;
+import backend.user.User;
+import service.AuthService;
 import service.DiceService;
 
 @RestController
 @RequestMapping("/api/dice")
 public class DiceController {
     private final DiceService diceService;
+    private final AuthService authService;
 
-    public DiceController(DiceService diceService) {
+    public DiceController(DiceService diceService, AuthService authService) {
         this.diceService = diceService;
+        this.authService = authService;
     }
 
     @PostMapping("/roll")
@@ -36,8 +41,11 @@ public class DiceController {
     }
 
     @PostMapping("/skill-check")
-    public SkillCheckResult skillCheck(@RequestBody SkillCheckRequest request) {
-        return diceService.checkSkill(request.userId(), request.cardId(), request.skillName());
+    public SkillCheckResult skillCheck(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody SkillCheckRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        return diceService.checkSkill(currentUser.getId(), request.cardId(), request.skillName());
     }
 
     public record RollRequest(String expression) {
@@ -46,6 +54,6 @@ public class DiceController {
     public record SanCheckRequest(String args) {
     }
 
-    public record SkillCheckRequest(int userId, int cardId, String skillName) {
+    public record SkillCheckRequest(int cardId, String skillName) {
     }
 }

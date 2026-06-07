@@ -6,6 +6,7 @@ import backend.message.Message;
 import backend.message.MessageType;
 import backend.message.MessageVisibility;
 import repository.MessageRepository;
+import repository.Page;
 
 public class MessageService {
     private final MessageRepository messageRepository;
@@ -59,6 +60,11 @@ public class MessageService {
     public List<Message> getVisibleMessages(int roomId, int userId) {
         roomService.requireJoinedRoom(userId, roomId);
         return messageRepository.findVisibleMessages(roomId, userId);
+    }
+
+    public Page<Message> getVisibleMessages(int roomId, int userId, int page, int size) {
+        roomService.requireJoinedRoom(userId, roomId);
+        return messageRepository.findVisibleMessages(roomId, userId, page, size);
     }
 
     public List<Message> getPrivateMessages(int roomId, int userAId, int userBId) {

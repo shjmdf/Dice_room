@@ -26,6 +26,12 @@
             <artifactId>sqlite-jdbc</artifactId>
             <version>3.53.1.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>at.favre.lib</groupId>
+            <artifactId>bcrypt</artifactId>
+            <version>0.10.2</version>
+        </dependency>
     </dependencies>
 
     <build>

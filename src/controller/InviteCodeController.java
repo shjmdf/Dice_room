@@ -9,51 +9,59 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.user.InviteCode;
+import backend.user.User;
+import service.AuthService;
 import service.InviteCodeService;
-import service.UserService;
 
 @RestController
 @RequestMapping("/api/invite-codes")
 public class InviteCodeController {
     private final InviteCodeService inviteCodeService;
-    private final UserService userService;
+    private final AuthService authService;
 
-    public InviteCodeController(InviteCodeService inviteCodeService, UserService userService) {
+    public InviteCodeController(InviteCodeService inviteCodeService, AuthService authService) {
         this.inviteCodeService = inviteCodeService;
-        this.userService = userService;
+        this.authService = authService;
     }
 
     @PostMapping
-    public InviteCodeResponse generateInviteCode(@RequestBody GenerateInviteCodeRequest request) {
-        userService.requireAdmin(request.adminId());
+    public InviteCodeResponse generateInviteCode(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody GenerateInviteCodeRequest request) {
+        User admin = authService.requireAdmin(authorization);
         InviteCode inviteCode = inviteCodeService.generateInviteCode(
                 request.usageLimit(),
                 new Date(request.expirationTimestampMillis()),
-                request.adminId());
+                admin.getId());
         return toResponse(inviteCode);
     }
 
     @GetMapping
-    public List<InviteCodeResponse> getInviteCodes(@RequestParam int adminId) {
-        userService.requireAdmin(adminId);
+    public List<InviteCodeResponse> getInviteCodes(
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        authService.requireAdmin(authorization);
         return inviteCodeService.getInviteCodes().stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @PostMapping("/{code}/disable")
-    public void disableInviteCode(@PathVariable String code, @RequestParam int adminId) {
-        userService.requireAdmin(adminId);
+    public void disableInviteCode(
+            @PathVariable String code,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        authService.requireAdmin(authorization);
         inviteCodeService.disableInviteCode(code);
     }
 
     @DeleteMapping("/{code}")
-    public void deleteInviteCode(@PathVariable String code, @RequestParam int adminId) {
-        userService.requireAdmin(adminId);
+    public void deleteInviteCode(
+            @PathVariable String code,
+            @RequestHeader(name = "Authorization", required = false) String authorization) {
+        authService.requireAdmin(authorization);
         inviteCodeService.deleteInviteCode(code);
     }
 
@@ -65,7 +73,7 @@ public class InviteCodeController {
                 inviteCode.getStatus().name());
     }
 
-    public record GenerateInviteCodeRequest(int adminId, int usageLimit, long expirationTimestampMillis) {
+    public record GenerateInviteCodeRequest(int usageLimit, long expirationTimestampMillis) {
     }
 
     public record InviteCodeResponse(String code, int usageLimit, int usedCount, String status) {
