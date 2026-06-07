@@ -63,8 +63,20 @@ public class RoomService {
         roomRepository.updateStatus(roomId, RoomStatus.CLOSED);
     }
 
+    public void closeRoomByAdmin(int adminId, int roomId) {
+        userService.requireAdmin(adminId);
+        requireRoom(roomId);
+        roomRepository.updateStatus(roomId, RoomStatus.CLOSED);
+    }
+
     public void deleteRoom(int operatorId, int roomId) {
         requireOwnedRoom(operatorId, roomId);
+        roomRepository.updateStatus(roomId, RoomStatus.DELETED);
+    }
+
+    public void deleteRoomByAdmin(int adminId, int roomId) {
+        userService.requireAdmin(adminId);
+        requireRoom(roomId);
         roomRepository.updateStatus(roomId, RoomStatus.DELETED);
     }
 
@@ -166,6 +178,16 @@ public class RoomService {
     public List<RoomMember> getRoomMembers(int roomId) {
         requireRoom(roomId);
         return roomRepository.findActiveMembersByRoomId(roomId);
+    }
+
+    public void bindMemberCard(int userId, int roomId, Integer cardId) {
+        requireJoinedRoom(userId, roomId);
+        roomRepository.updateMemberCard(roomId, userId, cardId);
+    }
+
+    public void changeOwnRoomDisplayName(int userId, int roomId, String displayName) {
+        requireJoinedRoom(userId, roomId);
+        roomRepository.updateMemberDisplayName(roomId, userId, displayName == null ? "" : displayName.trim());
     }
 
     public List<Room> getAllRooms() {

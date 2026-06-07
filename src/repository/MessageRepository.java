@@ -101,15 +101,19 @@ public class MessageRepository {
 
         String sql = """
                 SELECT *
-                FROM messages
-                WHERE room_id = ?
-                  AND (
-                    visibility = 'PUBLIC'
-                    OR sender_id = ?
-                    OR receiver_id = ?
-                  )
-                ORDER BY id DESC
-                LIMIT ? OFFSET ?
+                FROM (
+                    SELECT *
+                    FROM messages
+                    WHERE room_id = ?
+                      AND (
+                        visibility = 'PUBLIC'
+                        OR sender_id = ?
+                        OR receiver_id = ?
+                      )
+                    ORDER BY id DESC
+                    LIMIT ? OFFSET ?
+                ) latest_messages
+                ORDER BY id
                 """;
         List<Message> messages = new ArrayList<>();
 
