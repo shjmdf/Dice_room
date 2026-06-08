@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 export DICE_ROOM_SITE="${DICE_ROOM_SITE:-localhost}"
-
+# for a real website, you should set DICE_ROOM_SITE to your domain name and configure Caddyfile accordingly
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

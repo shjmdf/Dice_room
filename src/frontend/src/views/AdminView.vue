@@ -20,8 +20,14 @@
           <el-table-column prop="nickname" label="昵称" min-width="130" />
           <el-table-column prop="role" label="角色" width="100" />
           <el-table-column prop="status" label="状态" width="110" />
-          <el-table-column label="操作" width="230" fixed="right">
+          <el-table-column label="操作" width="300" fixed="right">
             <template #default="{ row }">
+              <el-button
+                size="small"
+                @click.stop="openUserDetail(row)"
+              >
+                详情
+              </el-button>
               <el-button
                 size="small"
                 :disabled="row.role === 'ADMIN' || row.status !== 'ACTIVE'"
@@ -127,6 +133,27 @@
         </el-table>
       </section>
     </main>
+
+    <el-dialog v-model="showUserDialog" title="用户详情" width="520">
+      <div v-if="selectedUser" class="user-detail">
+        <div class="detail-row"><span>ID</span><strong>{{ selectedUser.id }}</strong></div>
+        <div class="detail-row"><span>登录名</span><strong>{{ selectedUser.loginName }}</strong></div>
+        <div class="detail-row"><span>昵称</span><strong>{{ selectedUser.nickname }}</strong></div>
+        <div class="detail-row"><span>角色</span><strong>{{ selectedUser.role }}</strong></div>
+        <div class="detail-row"><span>状态</span><strong>{{ selectedUser.status }}</strong></div>
+        <div class="detail-row"><span>邮箱</span><strong>{{ selectedUser.email || '-' }}</strong></div>
+        <div class="detail-row"><span>简介</span><strong>{{ selectedUser.description || '-' }}</strong></div>
+        <el-divider />
+        <label class="reset-password">
+          重置密码
+          <el-input v-model="resetPasswordValue" type="password" show-password placeholder="输入新密码" />
+        </label>
+      </div>
+      <template #footer>
+        <el-button @click="showUserDialog = false">关闭</el-button>
+        <el-button type="primary" :loading="resettingPassword" @click="resetUserPassword">保存密码</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -139,9 +166,13 @@ import api from '../api'
 const router = useRouter()
 const loading = ref(false)
 const creatingInvite = ref(false)
+const resettingPassword = ref(false)
+const showUserDialog = ref(false)
 const users = ref([])
 const rooms = ref([])
 const inviteCodes = ref([])
+const selectedUser = ref(null)
+const resetPasswordValue = ref('')
 const newInvite = reactive({
   usageLimit: 1,
   expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -182,6 +213,30 @@ async function deleteUser(user) {
   await api.delete(`/users/${user.id}`)
   ElMessage.success('用户已删除')
   await load()
+}
+
+async function openUserDetail(user) {
+  const { data } = await api.get(`/users/${user.id}`)
+  selectedUser.value = data
+  resetPasswordValue.value = ''
+  showUserDialog.value = true
+}
+
+async function resetUserPassword() {
+  if (!selectedUser.value) return
+  if (!resetPasswordValue.value.trim()) {
+    ElMessage.warning('请输入新密码')
+    return
+  }
+
+  resettingPassword.value = true
+  try {
+    await api.patch(`/users/${selectedUser.value.id}/password`, { password: resetPasswordValue.value })
+    resetPasswordValue.value = ''
+    ElMessage.success('密码已重置')
+  } finally {
+    resettingPassword.value = false
+  }
 }
 
 async function closeRoom(room) {
@@ -305,6 +360,37 @@ function formatDate(value) {
 
 .date-picker {
   width: 210px;
+}
+
+.user-detail {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 13px;
+}
+
+.detail-row span,
+.reset-password {
+  color: #687381;
+}
+
+.detail-row strong {
+  min-width: 0;
+  color: #20252b;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.reset-password {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
 }
 
 @media (max-width: 720px) {

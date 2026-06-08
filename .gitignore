@@ -17,7 +17,8 @@ Thumbs.db
 
 # Logs
 *.log
-docs/
+docs/*
+!docs/project_report.md
 
 # Node / frontend
 node_modules/
