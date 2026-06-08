@@ -40,6 +40,11 @@ public class MessageService {
         return createMessage(roomId, senderId, 0, MessageType.DICE, MessageVisibility.PUBLIC, content);
     }
 
+    public Message sendPrivateDiceMessage(int roomId, int senderId, String content) {
+        roomService.requireJoinedRoom(senderId, roomId);
+        return createMessage(roomId, senderId, senderId, MessageType.DICE, MessageVisibility.PRIVATE, content);
+    }
+
     public Message sendSkillCheckMessage(int roomId, int senderId, String content) {
         roomService.requireJoinedRoom(senderId, roomId);
         return createMessage(roomId, senderId, 0, MessageType.SKILL_CHECK, MessageVisibility.PUBLIC, content);

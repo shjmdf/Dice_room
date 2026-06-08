@@ -56,6 +56,15 @@ public class MessageController {
         return toResponse(messageService.sendDiceMessage(roomId, currentUser.getId(), request.content()));
     }
 
+    @PostMapping("/dice/private")
+    public MessageResponse sendPrivateDiceMessage(
+            @PathVariable int roomId,
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody SendTextMessageRequest request) {
+        User currentUser = authService.requireUser(authorization);
+        return toResponse(messageService.sendPrivateDiceMessage(roomId, currentUser.getId(), request.content()));
+    }
+
     @PostMapping("/skill-check")
     public MessageResponse sendSkillCheckMessage(
             @PathVariable int roomId,

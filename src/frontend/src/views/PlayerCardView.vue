@@ -10,7 +10,9 @@
       </div>
       <div class="top-actions">
         <el-button @click="load">刷新</el-button>
+        <el-button :loading="savingBasic" @click="saveBasicInfo">保存基础</el-button>
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        <el-button type="danger" plain :loading="deleting" @click="deleteCard">删除</el-button>
       </div>
     </header>
 
@@ -335,6 +337,27 @@
             </div>
           </section>
         </el-tab-pane>
+
+        <el-tab-pane label="JSON" name="json">
+          <section class="sheet-section">
+            <div class="section-title with-tools">
+              <span>角色卡 JSON</span>
+              <div class="toolbar">
+                <el-button size="small" @click="loadJson">读取 JSON</el-button>
+                <el-button size="small" type="primary" :loading="savingJson" @click="saveJson">写入 JSON</el-button>
+                <el-button size="small" @click="applyJsonToEditor">应用到编辑器</el-button>
+              </div>
+            </div>
+            <el-input
+              v-model="jsonText"
+              type="textarea"
+              :rows="22"
+              resize="vertical"
+              spellcheck="false"
+              class="json-editor"
+            />
+          </section>
+        </el-tab-pane>
       </el-tabs>
     </main>
   </div>
@@ -343,7 +366,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 
 const route = useRoute()
@@ -352,7 +375,12 @@ const cardId = Number(route.params.cardId)
 
 const loading = ref(false)
 const saving = ref(false)
+const savingBasic = ref(false)
+const savingJson = ref(false)
+const deleting = ref(false)
+const cardMeta = ref(null)
 const sheet = ref(null)
+const jsonText = ref('')
 const activeTab = ref('overview')
 const skillKeyword = ref('')
 const skillCategory = ref('')
@@ -392,8 +420,13 @@ onMounted(load)
 async function load() {
   loading.value = true
   try {
-    const { data } = await api.get(`/player-cards/${cardId}/sheet`)
-    sheet.value = normalizeSheet(data.sheet)
+    const [cardRes, sheetRes] = await Promise.all([
+      api.get(`/player-cards/${cardId}`),
+      api.get(`/player-cards/${cardId}/sheet`)
+    ])
+    cardMeta.value = cardRes.data
+    sheet.value = normalizeSheet(sheetRes.data.sheet)
+    syncJsonText()
   } finally {
     loading.value = false
   }
@@ -404,10 +437,81 @@ async function save() {
   try {
     normalizeBeforeSave()
     await api.put(`/player-cards/${cardId}/sheet`, { sheet: sheet.value })
+    syncJsonText()
     ElMessage.success('保存成功')
   } finally {
     saving.value = false
   }
+}
+
+async function saveBasicInfo() {
+  if (!sheet.value) return
+  savingBasic.value = true
+  try {
+    const name = sheet.value.basicInformation?.name || cardMeta.value?.name || '未命名角色'
+    const era = sheet.value.era || sheet.value.basicInformation?.era || ''
+    await api.patch(`/player-cards/${cardId}/basic`, { name, era })
+    sheet.value.basicInformation.name = name
+    sheet.value.basicInformation.era = era
+    sheet.value.era = era
+    if (cardMeta.value) {
+      cardMeta.value.name = name
+      cardMeta.value.era = era
+    }
+    ElMessage.success('基础信息已保存')
+  } finally {
+    savingBasic.value = false
+  }
+}
+
+async function loadJson() {
+  const { data } = await api.get(`/player-cards/${cardId}/json`)
+  jsonText.value = JSON.stringify(data, null, 2)
+  ElMessage.success('JSON 已读取')
+}
+
+function applyJsonToEditor() {
+  try {
+    sheet.value = normalizeSheet(JSON.parse(jsonText.value))
+    ElMessage.success('JSON 已应用到编辑器')
+  } catch (error) {
+    ElMessage.error('JSON 格式不正确')
+  }
+}
+
+async function saveJson() {
+  savingJson.value = true
+  try {
+    const parsed = JSON.parse(jsonText.value)
+    await api.put(`/player-cards/${cardId}/json`, { sheet: parsed })
+    sheet.value = normalizeSheet(parsed)
+    syncJsonText()
+    ElMessage.success('JSON 已写入')
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      ElMessage.error('JSON 格式不正确')
+      return
+    }
+    throw error
+  } finally {
+    savingJson.value = false
+  }
+}
+
+async function deleteCard() {
+  await ElMessageBox.confirm('确定删除这张角色卡吗？', '删除角色卡', { type: 'warning' })
+  deleting.value = true
+  try {
+    await api.delete(`/player-cards/${cardId}`)
+    ElMessage.success('角色卡已删除')
+    router.push('/')
+  } finally {
+    deleting.value = false
+  }
+}
+
+function syncJsonText() {
+  jsonText.value = JSON.stringify(sheet.value, null, 2)
 }
 
 function normalizeSheet(value) {
@@ -433,6 +537,7 @@ function normalizeSheet(value) {
 
 function normalizeBeforeSave() {
   sheet.value.basicInformation.era = sheet.value.era || sheet.value.basicInformation.era || ''
+  sheet.value.basicInformation.name = sheet.value.basicInformation.name || cardMeta.value?.name || ''
   sheet.value.status.majorWound = sheet.value.status.seriousInjury
   sheet.value.skills.forEach(recalcSkillThreshold)
   characteristicRows.value.forEach(([, item]) => recalcCharacteristic(item))
@@ -705,6 +810,10 @@ label {
 .asset-grid {
   display: grid;
   gap: 12px;
+}
+
+.json-editor {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .mythos-head {
