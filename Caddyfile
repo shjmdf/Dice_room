@@ -4,7 +4,7 @@
 	admin off
 }
 
-{$DICE_ROOM_SITE:localhost} {
+{$DICE_ROOM_SITE:http://localhost:8088} {
 	encode zstd gzip
 
 	handle /api/* {
@@ -12,7 +12,7 @@
 	}
 
 	handle {
-		root * {$DICE_ROOM_WEBROOT:/root/dice_room/src/frontend/dist}
+		root * {$DICE_ROOM_WEBROOT:./src/frontend/dist}
 		try_files {path} /index.html
 		file_server
 	}

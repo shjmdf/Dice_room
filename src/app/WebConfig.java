@@ -20,8 +20,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     /**
      * 允许的跨域来源。
-     * DICE_ROOM_SITE 配置（与 Caddyfile、run.sh 共用同一变量），
-     * 例如 DICE_ROOM_SITE=dice.tz.kg。未配置或为 localhost 时只放行本地。
+     * DICE_ROOM_SITE 配置（与 Caddyfile、run.sh 共用同一变量）。
+     * 可以是 example.com，也可以是 http://localhost:8088 这样的完整 origin。
      */
     private String[] allowedOrigins() {
         List<String> origins = new ArrayList<>();
@@ -32,8 +32,12 @@ public class WebConfig implements WebMvcConfigurer {
         if (site != null) {
             site = site.trim();
             if (!site.isEmpty() && !site.equals("localhost")) {
-                origins.add("https://" + site);
-                origins.add("http://" + site);
+                if (site.startsWith("http://") || site.startsWith("https://")) {
+                    origins.add(site);
+                } else {
+                    origins.add("https://" + site);
+                    origins.add("http://" + site);
+                }
             }
         }
         return origins.toArray(new String[0]);

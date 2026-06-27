@@ -18,7 +18,13 @@ Thumbs.db
 # Logs
 *.log
 docs/*
-!docs/project_report.md
+
+# Local environment
+.env
+.env.*
+src/main/resources/application.properties
+src/frontend/.env
+src/frontend/.env.*
 
 # Node / frontend
 node_modules/
