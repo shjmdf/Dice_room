@@ -273,4 +273,4 @@ sudo ./stop_and_clean.sh --apply --remove-system-packages
 
 ## 许可证
 
-本仓库目前尚未声明开源许可证。
+本项目基于 GNU General Public License v3.0 or later 发布。详见 [LICENSE](LICENSE)。
