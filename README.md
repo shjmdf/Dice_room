@@ -1,5 +1,5 @@
 # Dice Room
-**⚠️本Readme由Chatgpt 5.5 High 生成，不保证与代码完全对应**
+
 Dice Room 是一个面向桌面跑团场景的掷骰房间应用。它包含 Java/Spring Boot 后端、SQLite 数据库、Vue 3 前端，以及可选的 Caddy 生产部署入口。
 
 ## 功能概览
@@ -147,6 +147,78 @@ DICE_ROOM_SERVER_PORT=8080 \
 
 Caddy 会使用 `DICE_ROOM_SITE` 作为站点名。使用真实域名时，Caddy 会自动申请和续期 HTTPS 证书。
 
+如果服务器上已经有 Caddy、Nginx 或其他服务占用 `80/443`，不要再用 `run.sh` 启动本项目自带的 Caddy。此时应只构建前端、单独运行后端，并把现有反向代理接到前端目录和后端端口。
+
+## 接入已有 Caddy
+
+如果已有 Caddy 负责服务器的 `80/443`，可以复用它承载 Dice Room。
+
+先构建前端：
+
+```bash
+cd /opt/dice_room/src/frontend
+npm install
+npm run build
+```
+
+后端单独监听一个内部端口。如果 Caddy 在 Docker 容器里，而后端运行在宿主机上，后端通常需要监听 `0.0.0.0`，并通过防火墙避免后端端口直接对公网开放：
+
+```bash
+cd /opt/dice_room
+mvn -Dserver.address=0.0.0.0 -Dserver.port=8081 compile exec:java
+```
+
+Docker Caddy 需要能看到前端构建目录，并能访问宿主机后端。`docker-compose.yml` 示例：
+
+```yaml
+services:
+  caddy:
+    image: caddy:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+      - /opt/dice_room/src/frontend/dist:/srv/dice_room/dist:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+Caddyfile 示例：
+
+```caddyfile
+dice.example.com {
+    encode zstd gzip
+
+    handle /api/* {
+        reverse_proxy host.docker.internal:8081
+    }
+
+    handle {
+        root * /srv/dice_room/dist
+        try_files {path} /index.html
+        file_server
+    }
+}
+```
+
+验证 Caddy 容器能读取前端目录：
+
+```bash
+docker exec -it <caddy-container> ls -la /srv/dice_room/dist
+```
+
+验证 Caddy 容器能访问后端：
+
+```bash
+docker exec -it <caddy-container> wget -S -O- http://host.docker.internal:8081/api/users/me
+```
+
+未登录时返回 `401` 属于正常结果，说明代理链路已经打通。
+
 ## 配置项
 
 | 变量 | 默认值 | 作用 |
@@ -200,21 +272,20 @@ Content-Type: application/json
 
 ## systemd 示例
 
-如果要作为 Linux 服务运行，可以创建：
+如果 Dice Room 独占 Caddy，可以让 systemd 直接运行 `run.sh`。
+
+如果已经接入现有 Caddy，更推荐只把后端做成 systemd 服务：
 
 ```ini
 [Unit]
-Description=Dice Room
+Description=Dice Room Backend
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/dice_room
-Environment=DICE_ROOM_SITE=your-domain.com
-Environment=DICE_ROOM_SERVER_ADDRESS=127.0.0.1
-Environment=DICE_ROOM_SERVER_PORT=8080
-ExecStart=/opt/dice_room/run.sh
+ExecStart=/usr/bin/mvn -Dserver.address=0.0.0.0 -Dserver.port=8081 compile exec:java
 Restart=always
 RestartSec=5
 
@@ -222,19 +293,21 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
+保存为 `/etc/systemd/system/dice-room-backend.service`。
+
 然后执行：
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable dice-room
-sudo systemctl start dice-room
-sudo systemctl status dice-room
+sudo systemctl enable dice-room-backend
+sudo systemctl start dice-room-backend
+sudo systemctl status dice-room-backend
 ```
 
 查看日志：
 
 ```bash
-sudo journalctl -u dice-room -f
+sudo journalctl -u dice-room-backend -f
 ```
 
 ## 停止和清理
