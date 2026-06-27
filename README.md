@@ -161,11 +161,11 @@ npm install
 npm run build
 ```
 
-后端单独监听一个内部端口。如果 Caddy 在 Docker 容器里，而后端运行在宿主机上，后端通常需要监听 `0.0.0.0`，并通过防火墙避免后端端口直接对公网开放：
+后端单独监听一个内部端口。如果 Caddy 在 Docker 容器里，而后端运行在宿主机上，后端通常需要监听 `0.0.0.0`，并通过防火墙避免后端端口直接对公网开放。真实域名部署时必须设置 `DICE_ROOM_SITE`，它会作为后端 CORS 白名单：
 
 ```bash
 cd /opt/dice_room
-mvn -Dserver.address=0.0.0.0 -Dserver.port=8081 compile exec:java
+DICE_ROOM_SITE=dice.example.com mvn -Dserver.address=0.0.0.0 -Dserver.port=8081 compile exec:java
 ```
 
 Docker Caddy 需要能看到前端构建目录，并能访问宿主机后端。`docker-compose.yml` 示例：
@@ -205,6 +205,18 @@ dice.example.com {
 }
 ```
 
+在 Docker 自定义网络中，`host.docker.internal` 可能不可用或被防火墙拦截。可以查看当前 Docker 网络的宿主机网关：
+
+```bash
+docker network inspect proxy-net --format '{{range .IPAM.Config}}{{.Gateway}}{{end}}'
+```
+
+如果输出类似 `172.22.0.1`，可以把 Caddy 反向代理目标改成：
+
+```caddyfile
+reverse_proxy 172.22.0.1:8081
+```
+
 验证 Caddy 容器能读取前端目录：
 
 ```bash
@@ -214,10 +226,27 @@ docker exec -it <caddy-container> ls -la /srv/dice_room/dist
 验证 Caddy 容器能访问后端：
 
 ```bash
-docker exec -it <caddy-container> wget -S -O- http://host.docker.internal:8081/api/users/me
+docker exec -it <caddy-container> wget -T 5 -S -O- http://host.docker.internal:8081/api/users/me
 ```
 
 未登录时返回 `401` 属于正常结果，说明代理链路已经打通。
+
+如果 Caddy 容器访问后端超时，而宿主机本机访问后端正常，通常是防火墙拦截了 Docker 网桥到宿主机后端端口。使用 UFW 时，可以只允许该 Docker 网桥访问后端端口：
+
+```bash
+BR=br-$(docker network inspect proxy-net --format '{{.Id}}' | cut -c1-12)
+sudo ufw allow in on "$BR" to any port 8081 proto tcp
+```
+
+公网防火墙只需要暴露 SSH 和 Caddy 入口：
+
+```text
+22/tcp
+80/tcp
+443/tcp
+```
+
+后端端口如 `8081` 不应直接对公网开放，只应允许本机反向代理或 Docker 网桥访问。
 
 ## 配置项
 
@@ -285,6 +314,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/dice_room
+Environment=DICE_ROOM_SITE=dice.example.com
 ExecStart=/usr/bin/mvn -Dserver.address=0.0.0.0 -Dserver.port=8081 compile exec:java
 Restart=always
 RestartSec=5
@@ -347,3 +377,5 @@ sudo ./stop_and_clean.sh --apply --remove-system-packages
 ## 许可证
 
 本项目基于 GNU General Public License v3.0 or later 发布。详见 [LICENSE](LICENSE)。
+
+`LICENSE` 文件应保持 GPLv3 许可证原文，不需要把其中的 Free Software Foundation 版权声明改成项目作者。项目作者和版权年份可以在 README、发布页或源码文件头中声明。
