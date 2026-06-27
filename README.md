@@ -377,5 +377,3 @@ sudo ./stop_and_clean.sh --apply --remove-system-packages
 ## 许可证
 
 本项目基于 GNU General Public License v3.0 or later 发布。详见 [LICENSE](LICENSE)。
-
-`LICENSE` 文件应保持 GPLv3 许可证原文，不需要把其中的 Free Software Foundation 版权声明改成项目作者。项目作者和版权年份可以在 README、发布页或源码文件头中声明。
