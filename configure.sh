@@ -84,5 +84,5 @@ echo "- $FRONTEND_ENV_FILE"
 echo
 echo "常用命令："
 echo "- 生产运行：./run.sh"
-echo "- 后端开发：source .env && mvn -Dserver.address=\"\$DICE_ROOM_SERVER_ADDRESS\" -Dserver.port=\"\$DICE_ROOM_SERVER_PORT\" exec:java"
+echo "- 后端开发：source .env && mvn -Dserver.address=\"\$DICE_ROOM_SERVER_ADDRESS\" -Dserver.port=\"\$DICE_ROOM_SERVER_PORT\" compile exec:java"
 echo "- 前端开发：cd src/frontend && npm run dev"

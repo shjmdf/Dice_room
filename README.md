@@ -84,7 +84,7 @@ Dice Room 是一个面向桌面跑团场景的掷骰房间应用。它包含 Jav
 
 ```bash
 source .env
-mvn -Dserver.address="$DICE_ROOM_SERVER_ADDRESS" -Dserver.port="$DICE_ROOM_SERVER_PORT" exec:java
+mvn -Dserver.address="$DICE_ROOM_SERVER_ADDRESS" -Dserver.port="$DICE_ROOM_SERVER_PORT" compile exec:java
 ```
 
 启动前端开发服务器：
@@ -98,7 +98,7 @@ npm run dev
 如果不使用交互式配置，也可以直接指定端口：
 
 ```bash
-mvn -Dserver.address=127.0.0.1 -Dserver.port=8081 exec:java
+mvn -Dserver.address=127.0.0.1 -Dserver.port=8081 compile exec:java
 ```
 
 ```bash

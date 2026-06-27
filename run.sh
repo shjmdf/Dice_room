@@ -72,7 +72,7 @@ npm run build
 
 cd "$PROJECT_DIR"
 mkdir -p target
-mvn -Dserver.address="$DICE_ROOM_SERVER_ADDRESS" -Dserver.port="$DICE_ROOM_SERVER_PORT" exec:java > "$BACKEND_LOG" 2>&1 &
+mvn -Dserver.address="$DICE_ROOM_SERVER_ADDRESS" -Dserver.port="$DICE_ROOM_SERVER_PORT" compile exec:java > "$BACKEND_LOG" 2>&1 &
 BACKEND_PID="$!"
 
 echo "后端启动中，日志：$BACKEND_LOG"
